@@ -1,23 +1,22 @@
 ---
 - hosts: dbservers
-  become: true
   gather_facts: False
-  
+  become: true
   pre_tasks:
     - name: Install python for Ansible
       raw: test -e /usr/bin/python || (apt -y update && apt install -y python-minimal)
       register: output
       changed_when: output.stdout != ""
-    - setup: # aka gather_facts
 
   tasks: 
-    - name: install mysql server
-      apt: name=mysql-server state=present update_cache=yes
+    - name: install mysql and database tools
+      apt: name={{item}} state=present update_cache=yes
+      with_items:
+        - python-mysqldb
+        - mysql-server
 
-    - service: 
-        name=mysql 
-        state=started 
-        enabled=yes
+    - name: ensure mysql start
+      service: name=mysql state=started enabled=yes
 
     # Garantir que o mysql está ouvindo em todos as portas
     # Encontra a linha que inicia com bind-address e substitui por 0.0.0.0
@@ -28,8 +27,12 @@
                   line="bind-address = 0.0.0.0"
       notify: restart mysql
 
+    - name: create demo database user
+      mysql_user: name=demo password=demo priv=demo.*:ALL host='%' state=present
+
+    - name: create demo database
+      mysql_db: name=demo state=present
+
   handlers:
     - name: restart mysql
       service: name=mysql state=restarted
-
-      

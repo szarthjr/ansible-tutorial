@@ -1,0 +1,35 @@
+---
+- hosts: webservers
+  become: true
+  gather_facts: False
+  pre_tasks:
+    - name: Install python for Ansible
+      raw: test -e /usr/bin/python || (apt -y update && apt install -y python-minimal)
+      register: output
+      changed_when: output.stdout != ""
+
+  tasks:
+    - name: verify nginx service
+      command: service nginx status
+
+    - name: verify nginx listenning 80
+      wait_for: port=80 timeout=1
+
+- hosts: appservers
+  become: true
+  tasks:
+    - name: verify apache2 service
+      command: service apache2 status
+
+    - name: verify apache2 listenning 80
+      wait_for: port=80 timeout=1
+
+- hosts: dbservers
+  become: true
+  tasks:
+    - name: verify mysql service
+      command: service mysql status
+
+    - name: verify mysql listenning 3306
+      wait_for: port=3306 timeout=1
+      
